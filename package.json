@@ -1,15 +1,76 @@
 {
   "name": "streamlocal",
   "version": "1.0.0",
-  "description": "Local video player with Chromecast support — no build step required",
+  "description": "Local video player with Chromecast support — desktop app + tray companion",
+  "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "start":      "node dev-server.js & node server.js",
-    "web":        "node dev-server.js",
-    "cast":       "node server.js",
-    "open":       "open http://localhost:8765"
+    "start":         "node dev-server.js & node server.js",
+    "web":           "node dev-server.js",
+    "cast":          "node server.js",
+    "open":          "open http://localhost:8765",
+    "electron":      "electron .",
+    "dist":          "electron-builder",
+    "dist:mac":      "electron-builder --mac",
+    "dist:win":      "electron-builder --win",
+    "dist:linux":    "electron-builder --linux",
+    "postinstall":   "electron-builder install-app-deps || true"
+  },
+  "devDependencies": {
+    "electron":         "^33.0.0",
+    "electron-builder": "^25.0.0"
   },
   "engines": {
     "node": ">=18"
+  },
+  "build": {
+    "appId": "com.streamlocal.app",
+    "productName": "StreamLocal",
+    "copyright": "Copyright © 2026 StreamLocal",
+    "directories": {
+      "output":         "dist-electron",
+      "buildResources": "electron/build"
+    },
+    "files": [
+      "electron/**/*",
+      "server.js",
+      "dev-server.js",
+      "index.html",
+      "receiver.html",
+      "css/**/*",
+      "js/**/*",
+      "package.json",
+      "!**/*.{md,markdown,txt}",
+      "!**/.git",
+      "!**/.specstory"
+    ],
+    "mac": {
+      "target":   ["dmg", "zip"],
+      "category": "public.app-category.entertainment",
+      "icon":     "electron/build/icon.png",
+      "hardenedRuntime":     true,
+      "gatekeeperAssess":    false,
+      "darkModeSupport":     true,
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSLocalNetworkUsageDescription": "StreamLocal serves your videos over your Wi-Fi so Chromecast can play them."
+      }
+    },
+    "win": {
+      "target":           ["nsis"],
+      "icon":             "electron/build/icon.png",
+      "artifactName":     "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick":                     false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut":        true,
+      "createStartMenuShortcut":      true
+    },
+    "linux": {
+      "target":   ["AppImage"],
+      "category": "AudioVideo",
+      "icon":     "electron/build/icon.png"
+    }
   }
 }

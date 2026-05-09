@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 // Static file server for the StreamLocal web app. Zero npm dependencies.
+//
+// Usage as CLI:    node dev-server.js [port]
+// Usage as module: const { startWebServer } = require('./dev-server.js')
+
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
-
-const PORT = parseInt(process.env.PORT || process.argv[2] || '8765', 10);
-const ROOT = __dirname;
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -19,29 +20,51 @@ const MIME = {
   '.webp': 'image/webp',
 };
 
-http.createServer((req, res) => {
-  let urlPath = req.url.split('?')[0];
-  if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
+function startWebServer({ port = 8765, root = __dirname, logger = console } = {}) {
+  const server = http.createServer((req, res) => {
+    let urlPath = req.url.split('?')[0];
+    if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
 
-  const filePath = path.join(ROOT, urlPath);
+    const filePath = path.join(root, urlPath);
 
-  // Prevent path traversal
-  if (!filePath.startsWith(ROOT)) {
-    res.writeHead(403); res.end('Forbidden'); return;
-  }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME[ext] || 'application/octet-stream';
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
-      res.end('Not found');
-      return;
+    // Prevent path traversal
+    if (!filePath.startsWith(root)) {
+      res.writeHead(403); res.end('Forbidden'); return;
     }
-    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-cache' });
-    res.end(data);
+
+    const ext = path.extname(filePath).toLowerCase();
+    const contentType = MIME[ext] || 'application/octet-stream';
+
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-cache' });
+      res.end(data);
+    });
   });
-}).listen(PORT, '127.0.0.1', () => {
-  console.log(`StreamLocal web app → http://localhost:${PORT}`);
-});
+
+  server.listen(port, '127.0.0.1', () => {
+    logger.log(`StreamLocal web app → http://localhost:${port}`);
+  });
+
+  return server;
+}
+
+module.exports = { startWebServer };
+
+if (require.main === module) {
+  const port = parseInt(process.env.PORT || process.argv[2] || '8765', 10);
+  const server = startWebServer({ port });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use.`);
+    } else {
+      console.error(err);
+    }
+    process.exit(1);
+  });
+}

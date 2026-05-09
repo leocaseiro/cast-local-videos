@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>StreamLocal</title>
+  <!--
+    Cast Application Framework (CAF) v3 receiver SDK.
+    Must be the first script — nothing can run before this.
+  -->
+  <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #07070d;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      color: #f0f0f8;
+    }
+
+    /*
+     * cast-media-player is Google's Styled Media Player Element (SMPE).
+     * It handles everything automatically:
+     *   - video rendering and buffering
+     *   - TV remote D-pad interactions → shows overlay with:
+     *       play/pause, seek bar, title, CC/subtitle picker, next/prev (if queue)
+     *   - subtitle track rendering
+     *   - "Up next" card when queue has more items
+     */
+    cast-media-player {
+      width: 100vw;
+      height: 100vh;
+      --theme-hue: 270;
+      --progress-color: #7c3aed;
+      --splash-image: none;
+      --watermark-image: none;
+      --background-color: #000000;
+    }
+
+    /* ── Idle / launch screen ───────────────────────────────────────────── */
+    #idle {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      background: radial-gradient(ellipse at 50% 55%, #1c1028 0%, #07070d 70%);
+      transition: opacity 0.8s ease;
+    }
+    #idle.gone { opacity: 0; pointer-events: none; }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .brand-icon { width: 72px; height: 72px; color: #7c3aed; }
+    .brand-name {
+      font-size: 4rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: #f0f0f8;
+    }
+
+    .tagline {
+      font-size: 1.2rem;
+      color: rgba(255,255,255,0.38);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .dots { display: flex; gap: 12px; }
+    .dots i {
+      display: block;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #7c3aed;
+      animation: dot-pulse 1.5s ease-in-out infinite;
+    }
+    .dots i:nth-child(2) { animation-delay: 0.25s; }
+    .dots i:nth-child(3) { animation-delay: 0.5s; }
+
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 0.2; transform: scale(0.7); }
+      50%       { opacity: 1;   transform: scale(1.05); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Styled Media Player Element — the entire TV playback UI lives here -->
+<cast-media-player id="player"></cast-media-player>
+
+<!-- Idle / launch screen shown before any media loads -->
+<div id="idle">
+  <div class="brand">
+    <svg class="brand-icon" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 8L16 11L10 14V8Z" fill="currentColor"/>
+      <path d="M8 21L12 17L16 21" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="brand-name">StreamLocal</span>
+  </div>
+  <p class="tagline">Open StreamLocal in Chrome to start casting</p>
+  <div class="dots"><i></i><i></i><i></i></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const ctx  = cast.framework.CastReceiverContext.getInstance();
+  const pm   = ctx.getPlayerManager();
+  const idle = document.getElementById('idle');
+
+  // Hide idle screen as soon as the sender loads media
+  pm.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (req) => {
+    idle.classList.add('gone');
+    return req; // must return the request for playback to proceed
+  });
+
+  // Restore idle screen when the queue is fully exhausted
+  pm.addEventListener(cast.framework.events.EventType.MEDIA_FINISHED, () => {
+    setTimeout(() => idle.classList.remove('gone'), 800);
+  });
+
+  ctx.start();
+})();
+</script>
+
+</body>
+</html>
