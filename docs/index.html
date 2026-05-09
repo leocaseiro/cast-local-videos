@@ -3,80 +3,271 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CastLocalVideos — Cast Receiver Host</title>
+  <title>CastLocalVideos — Cast local videos to Chromecast</title>
+  <meta name="description" content="Mac app that plays your local video files in Chrome and casts them to Chromecast — with subtitle auto-detect, playlists, and watch-progress sync.">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:        #07070d;
+      --bg-elev:   rgba(255, 255, 255, 0.04);
+      --border:    rgba(255, 255, 255, 0.08);
+      --text:      #f0f0f8;
+      --muted:     rgba(255, 255, 255, 0.62);
+      --dim:       rgba(255, 255, 255, 0.38);
+      --accent:    #7c3aed;
+      --accent-2:  #a78bfa;
+    }
     html, body {
-      min-height: 100%;
-      background: radial-gradient(ellipse at 50% 40%, #1c1028 0%, #07070d 70%);
-      color: #f0f0f8;
+      background: radial-gradient(ellipse at 50% 0%, #1c1028 0%, var(--bg) 60%);
+      color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
-    }
-    main {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 80px 24px;
-      text-align: center;
-    }
-    .logo {
-      width: 88px;
-      height: 88px;
-      color: #7c3aed;
-      margin: 0 auto 24px;
-    }
-    h1 {
-      font-size: 2.4rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 16px;
-    }
-    p {
-      color: rgba(255, 255, 255, 0.62);
       line-height: 1.6;
-      margin-bottom: 16px;
+      min-height: 100%;
     }
-    p strong { color: #f0f0f8; font-weight: 600; }
-    code {
+    a { color: var(--accent-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, kbd {
       background: rgba(124, 58, 237, 0.15);
       color: #c4b5fd;
       padding: 2px 8px;
       border-radius: 4px;
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.92em;
+      font-size: 0.9em;
     }
-    .note {
-      margin-top: 48px;
-      padding: 20px 24px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      text-align: left;
-      font-size: 0.95rem;
-      line-height: 1.55;
+    kbd { font-size: 0.78em; padding: 2px 6px; border: 1px solid var(--border); }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+    /* ─── Hero ─── */
+    .hero {
+      padding: 80px 0 56px;
+      text-align: center;
     }
+    .logo {
+      width: 88px; height: 88px;
+      color: var(--accent);
+      margin: 0 auto 20px;
+    }
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-bottom: 12px;
+    }
+    .tagline {
+      font-size: 1.25rem;
+      color: var(--muted);
+      margin-bottom: 36px;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .downloads {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: transform 0.08s ease, background 0.15s ease;
+      border: 1px solid transparent;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #6d28d9;
+      text-decoration: none;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: var(--bg-elev);
+      color: var(--text);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+      text-decoration: none;
+    }
+    .btn .arch {
+      font-size: 0.78rem;
+      font-weight: 500;
+      opacity: 0.75;
+    }
+    .download-note {
+      color: var(--dim);
+      font-size: 0.9rem;
+    }
+    .download-note a { color: var(--dim); text-decoration: underline; }
+
+    /* ─── Sections ─── */
+    section { padding: 32px 0; }
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+    }
+    h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin: 22px 0 8px;
+      color: var(--text);
+    }
+    p { color: var(--muted); margin-bottom: 14px; }
+    ol, ul { color: var(--muted); padding-left: 22px; margin-bottom: 14px; }
+    ol li, ul li { margin-bottom: 6px; }
+
+    .callout {
+      background: var(--bg-elev);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 18px 0;
+      font-size: 0.96rem;
+    }
+    .callout strong { color: var(--text); }
+
+    .shortcuts {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 18px;
+    }
+    .shortcuts td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .shortcuts td:first-child {
+      width: 130px;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92rem;
+    }
+
+    footer {
+      padding: 48px 0 64px;
+      text-align: center;
+      color: var(--dim);
+      font-size: 0.9rem;
+    }
+    footer a { color: var(--muted); }
   </style>
 </head>
 <body>
-<main>
-  <svg class="logo" viewBox="0 0 24 24" fill="none">
-    <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
-    <path d="M10 8L16 11L10 14V8Z" fill="currentColor"/>
-    <path d="M8 21L12 17L16 21" stroke="currentColor" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
 
-  <h1>CastLocalVideos</h1>
-  <p><strong>Cast receiver host.</strong> This page exists so Chromecast devices
-     can fetch the CastLocalVideos styled receiver UI over HTTPS.</p>
-  <p>The receiver itself is at <code>/receiver.html</code> and is loaded by
-     your TV — not meant to be opened in a regular browser.</p>
+<div class="container">
 
-  <div class="note">
-    Looking for the app? CastLocalVideos is a desktop app — install it on your
-    Mac, Windows, or Linux machine and play your local videos through a
-    Chromecast on your TV.
-  </div>
-</main>
+  <!-- ─── Hero ─── -->
+  <header class="hero">
+    <svg class="logo" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+      <path d="M10 8L16 11L10 14V8Z" fill="currentColor"/>
+      <path d="M8 21L12 17L16 21" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h1>CastLocalVideos</h1>
+    <p class="tagline">
+      Play your local video files in Chrome and cast them to Chromecast — with
+      subtitle auto-detect, playlists, and watch-progress sync.
+    </p>
+
+    <div class="downloads">
+      <a class="btn btn-primary"
+         href="https://github.com/leocaseiro/cast-local-videos/releases/latest/download/CastLocalVideos-arm64.dmg">
+        Download for Mac <span class="arch">(Apple Silicon)</span>
+      </a>
+      <a class="btn btn-secondary"
+         href="https://github.com/leocaseiro/cast-local-videos/releases/latest/download/CastLocalVideos-x64.dmg">
+        Mac <span class="arch">(Intel)</span>
+      </a>
+    </div>
+    <p class="download-note">
+      Not sure?
+      <a href="https://support.apple.com/en-us/HT211814">Check your Mac</a> ·
+      All releases on
+      <a href="https://github.com/leocaseiro/cast-local-videos/releases">GitHub</a>
+    </p>
+  </header>
+
+  <!-- ─── Install ─── -->
+  <section>
+    <h2>Install</h2>
+    <ol>
+      <li>Open the downloaded <code>.dmg</code> and drag <strong>CastLocalVideos</strong> to your Applications folder.</li>
+      <li>In Applications, <strong>right-click</strong> CastLocalVideos → <strong>Open</strong>.</li>
+      <li>Click <strong>Open</strong> in the warning dialog. (The app isn't signed with an Apple Developer ID yet, so this step is needed once.)</li>
+    </ol>
+    <div class="callout">
+      <strong>Why right-click → Open?</strong> macOS Gatekeeper blocks unsigned
+      apps on first launch. After you've opened it once this way, double-clicking
+      works normally.
+    </div>
+  </section>
+
+  <!-- ─── How to use ─── -->
+  <section>
+    <h2>Use</h2>
+    <ol>
+      <li><strong>Launch CastLocalVideos.</strong> A play icon appears in your menu bar; Chrome opens to the library.</li>
+      <li><strong>Click "Open Folder"</strong> and pick a folder of videos. The app remembers it across sessions.</li>
+      <li><strong>Click a video to play it</strong>, or click the Cast icon to send it to a Chromecast on the same Wi-Fi.</li>
+      <li><strong>Subtitles</strong> load automatically when a <code>.vtt</code> or <code>.srt</code> file with the same name sits next to the video.</li>
+      <li><strong>Playlists</strong>: load any <code>.m3u</code> file from the toolbar.</li>
+      <li><strong>Resume</strong>: progress is saved every few seconds — re-open the app and pick up where you left off.</li>
+    </ol>
+
+    <h3>Keyboard shortcuts</h3>
+    <table class="shortcuts">
+      <tr><td><kbd>Space</kbd></td><td>Play / pause</td></tr>
+      <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Skip 10 seconds</td></tr>
+      <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Volume</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Mute</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Fullscreen</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Toggle subtitles</td></tr>
+      <tr><td><kbd>N</kbd> / <kbd>P</kbd></td><td>Next / previous in playlist</td></tr>
+      <tr><td><kbd>0</kbd>–<kbd>9</kbd></td><td>Jump to 0%, 10%, … 90%</td></tr>
+    </table>
+
+    <h3>Quitting</h3>
+    <p>
+      Click the menu-bar icon → <strong>Quit</strong>. Closing Chrome doesn't
+      stop the app — the tray keeps the cast server alive so playback continues
+      on your TV.
+    </p>
+  </section>
+
+  <!-- ─── Cast receiver note ─── -->
+  <section>
+    <h2>About this site</h2>
+    <p>
+      This site also hosts the <a href="receiver.html">CastLocalVideos Cast receiver</a> —
+      the styled TV-side player your Chromecast loads when the app starts a
+      cast session. You don't need to open it directly; it's only here so
+      Google's Cast platform can fetch it over HTTPS.
+    </p>
+    <p>
+      Source code, issues, and all releases live on
+      <a href="https://github.com/leocaseiro/cast-local-videos">GitHub</a>.
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  Open source · <a href="https://github.com/leocaseiro/cast-local-videos">github.com/leocaseiro/cast-local-videos</a>
+</footer>
+
 </body>
 </html>

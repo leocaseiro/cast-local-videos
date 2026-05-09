@@ -2,6 +2,12 @@
   "name": "cast-local-videos",
   "version": "1.0.0",
   "description": "Local video player with Chromecast support — desktop app + tray companion",
+  "author": "Leo Caseiro",
+  "homepage": "https://leocaseiro.github.io/cast-local-videos/",
+  "repository": {
+    "type": "git",
+    "url":  "git+https://github.com/leocaseiro/cast-local-videos.git"
+  },
   "main": "electron/main.js",
   "private": true,
   "scripts": {
@@ -44,13 +50,22 @@
       "!**/.git",
       "!**/.specstory"
     ],
+    "publish": {
+      "provider": "github",
+      "owner":    "leocaseiro",
+      "repo":     "cast-local-videos"
+    },
     "mac": {
-      "target":   ["dmg", "zip"],
-      "category": "public.app-category.entertainment",
-      "icon":     "electron/build/icon.png",
-      "hardenedRuntime":     true,
-      "gatekeeperAssess":    false,
-      "darkModeSupport":     true,
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "category":          "public.app-category.entertainment",
+      "icon":              "electron/build/icon.png",
+      "artifactName":      "${productName}-${arch}.${ext}",
+      "hardenedRuntime":   true,
+      "gatekeeperAssess":  false,
+      "darkModeSupport":   true,
       "extendInfo": {
         "LSUIElement": true,
         "NSLocalNetworkUsageDescription": "CastLocalVideos serves your videos over your Wi-Fi so Chromecast can play them."
