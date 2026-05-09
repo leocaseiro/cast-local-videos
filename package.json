@@ -1,0 +1,15 @@
+{
+  "name": "streamlocal",
+  "version": "1.0.0",
+  "description": "Local video player with Chromecast support — no build step required",
+  "private": true,
+  "scripts": {
+    "start":      "node dev-server.js & node server.js",
+    "web":        "node dev-server.js",
+    "cast":       "node server.js",
+    "open":       "open http://localhost:8765"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

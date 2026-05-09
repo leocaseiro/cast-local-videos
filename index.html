@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StreamLocal</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Must be defined synchronously BEFORE the Cast SDK script loads.
+    // Stores readiness so ES modules (which are deferred) can pick it up later.
+    window.__castCallbacks = [];
+    window['__onGCastApiAvailable'] = function(isAvailable) {
+      window.__castApiReady = isAvailable;
+      window.__castCallbacks.forEach(function(fn) { fn(isAvailable); });
+      window.__castCallbacks = [];
+    };
+  </script>
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ LIBRARY VIEW ═══ -->
+  <div id="library-view" class="view active">
+
+    <header class="app-header">
+      <div class="header-brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/>
+          <path d="M10 8L16 11L10 14V8Z" fill="currentColor"/>
+          <path d="M8 21L12 17L16 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="brand-name">StreamLocal</span>
+      </div>
+
+      <div class="header-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+          <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input type="search" id="search-input" placeholder="Search videos…" autocomplete="off">
+      </div>
+
+      <div class="header-actions">
+        <button id="open-folder-btn" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M22 19C22 20.1 21.1 21 20 21H4C2.9 21 2 20.1 2 19V5C2 3.9 2.9 3 4 3H9L11 5H20C21.1 5 22 5.9 22 7V19Z" stroke="currentColor" stroke-width="2"/></svg>
+          Open Folder
+        </button>
+        <button id="load-playlist-btn" class="btn btn-secondary" title="Load .m3u playlist">
+          <svg viewBox="0 0 24 24" fill="none">
+            <line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="3.5" cy="6" r="1.5" fill="currentColor"/>
+            <circle cx="3.5" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="3.5" cy="18" r="1.5" fill="currentColor"/>
+          </svg>
+          Playlist
+        </button>
+        <input type="file" id="playlist-file-input" accept=".m3u,.m3u8" hidden>
+        <button id="cast-btn-library" class="icon-btn cast-btn" title="Cast to TV" data-cast-state="unavailable">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M2 16.1A5 5 0 015.9 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M2 12.05A9 9 0 0111.95 22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="2" cy="22" r="2" fill="currentColor"/>
+            <path d="M20 3H4a2 2 0 00-2 2v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M22 5v14a2 2 0 01-2 2H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="library-body">
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <span>Folders</span>
+            <button id="add-folder-btn" class="sidebar-add-btn" title="Add folder">+</button>
+          </div>
+          <ul id="folder-list" class="sidebar-list"></ul>
+        </div>
+        <div class="sidebar-section">
+          <div class="sidebar-section-header"><span>Recently Watched</span></div>
+          <ul id="recent-list" class="sidebar-list"></ul>
+        </div>
+      </aside>
+
+      <main class="library-main">
+        <div class="library-toolbar" id="library-toolbar" hidden>
+          <span id="video-count" class="video-count"></span>
+          <div class="toolbar-right">
+            <div class="view-toggle-group">
+              <button class="view-toggle active" data-layout="grid" title="Grid view">
+                <svg viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg>
+              </button>
+              <button class="view-toggle" data-layout="list" title="List view">
+                <svg viewBox="0 0 20 20" fill="none"><line x1="7" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="7" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="7" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="3" cy="5" r="1.5" fill="currentColor"/><circle cx="3" cy="10" r="1.5" fill="currentColor"/><circle cx="3" cy="15" r="1.5" fill="currentColor"/></svg>
+              </button>
+            </div>
+            <select id="sort-select" class="sort-select">
+              <option value="name">Name</option>
+              <option value="size">Size</option>
+              <option value="recent">Recent</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="video-grid" class="video-grid" hidden></div>
+
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">
+            <svg viewBox="0 0 80 80" fill="none">
+              <rect x="6" y="10" width="68" height="48" rx="5" stroke="currentColor" stroke-width="3" stroke-dasharray="10 5"/>
+              <path d="M32 34L50 40L32 46V34Z" fill="currentColor" opacity="0.5"/>
+              <path d="M30 70H50M40 58V70" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h2>No videos yet</h2>
+          <p>Open a local folder or NAS mount to browse your video library</p>
+          <button id="empty-open-btn" class="btn btn-primary btn-lg">Open Folder</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ═══ PLAYER VIEW ═══ -->
+  <div id="player-view" class="view hidden">
+    <div class="player-layout">
+
+      <div class="player-main" id="player-main">
+        <div id="video-container" class="video-container">
+
+          <video id="video-el" preload="auto" crossorigin="anonymous" playsinline></video>
+
+          <!-- Shown while casting; hides the local video -->
+          <div id="cast-overlay" class="cast-overlay" style="display:none">
+            <div class="cast-overlay-icon">
+              <svg class="cast-icon-main" viewBox="0 0 24 24" fill="none">
+                <path d="M2 16.1A5 5 0 015.9 20" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M2 12.05A9 9 0 0111.95 22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="2" cy="22" r="2.5" fill="currentColor"/>
+                <path d="M20 3H4a2 2 0 00-2 2v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M22 5v14a2 2 0 01-2 2H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <div class="cast-ring cast-ring-1"></div>
+              <div class="cast-ring cast-ring-2"></div>
+            </div>
+            <div class="cast-overlay-label">Casting to <strong id="cast-device-label">your TV</strong></div>
+            <div class="cast-overlay-title" id="cast-overlay-title"></div>
+          </div>
+
+          <div id="player-overlay" class="player-overlay">
+            <!-- Top bar -->
+            <div class="overlay-top">
+              <button id="back-btn" class="icon-btn" title="Back to library">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M19 12H5M12 5L5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span id="player-title" class="player-title"></span>
+              <div class="overlay-top-right">
+                <button id="cast-btn-player" class="icon-btn cast-btn" title="Cast to TV" data-cast-state="unavailable">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M2 16.1A5 5 0 015.9 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M2 12.05A9 9 0 0111.95 22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="2" cy="22" r="2" fill="currentColor"/>
+                    <path d="M20 3H4a2 2 0 00-2 2v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M22 5v14a2 2 0 01-2 2H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+                <button id="subtitle-btn" class="icon-btn" title="Subtitles (C)">
+                  <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><line x1="7" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="7" y1="14" x2="13" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+                <button id="toggle-playlist-btn" class="icon-btn" title="Playlist">
+                  <svg viewBox="0 0 24 24" fill="none"><line x1="8" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="3.5" cy="6" r="1.5" fill="currentColor"/><circle cx="3.5" cy="12" r="1.5" fill="currentColor"/><circle cx="3.5" cy="18" r="1.5" fill="currentColor"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Center click zone -->
+            <div id="center-click" class="center-click">
+              <div id="play-indicator" class="play-indicator" aria-hidden="true"></div>
+            </div>
+
+            <!-- Bottom controls -->
+            <div class="overlay-bottom">
+              <div class="progress-row">
+                <div id="progress-bar" class="progress-bar" role="slider" tabindex="0" aria-label="Video progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="progress-track">
+                    <div id="buffered-fill" class="buffered-fill"></div>
+                    <div id="progress-fill" class="progress-fill"></div>
+                    <div id="progress-thumb" class="progress-thumb"></div>
+                  </div>
+                  <div id="progress-tooltip" class="progress-tooltip" aria-hidden="true">0:00</div>
+                </div>
+              </div>
+
+              <div class="controls-row">
+                <div class="controls-left">
+                  <button id="prev-btn" class="icon-btn" title="Previous (P)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="19,4 9,12 19,20"/><rect x="5" y="4" width="3" height="16" rx="1"/></svg>
+                  </button>
+                  <button id="play-pause-btn" class="icon-btn play-pause-btn" title="Play/Pause (Space)">
+                    <svg id="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3L19 12L5 21V3Z"/></svg>
+                    <svg id="pause-icon" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+                  </button>
+                  <button id="next-btn" class="icon-btn" title="Next (N)">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><rect x="16" y="4" width="3" height="16" rx="1"/></svg>
+                  </button>
+
+                  <div class="volume-group">
+                    <button id="mute-btn" class="icon-btn" title="Mute (M)">
+                      <svg id="vol-high" viewBox="0 0 24 24" fill="none"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor"/><path d="M15.54 8.46A5 5 0 0117 12a5 5 0 01-1.46 3.54" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19.07 4.93A10 10 0 0122 12a10 10 0 01-2.93 7.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                      <svg id="vol-muted" viewBox="0 0 24 24" fill="none" style="display:none"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor"/><line x1="23" y1="9" x2="17" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="17" y1="9" x2="23" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                    <input type="range" id="volume-slider" class="volume-slider" min="0" max="1" step="0.05" value="1">
+                  </div>
+
+                  <span class="time-display">
+                    <span id="current-time-el">0:00</span>
+                    <span class="time-sep"> / </span>
+                    <span id="duration-el">0:00</span>
+                  </span>
+                </div>
+
+                <div class="controls-right">
+                  <select id="speed-select" class="speed-select" title="Playback speed">
+                    <option value="0.5">0.5×</option>
+                    <option value="0.75">0.75×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.25">1.25×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                  </select>
+                  <button id="fullscreen-btn" class="icon-btn" title="Fullscreen (F)">
+                    <svg id="fs-expand" viewBox="0 0 24 24" fill="none"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M21 16v3a2 2 0 01-2 2h-3M3 16v3a2 2 0 002 2h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <svg id="fs-shrink" viewBox="0 0 24 24" fill="none" style="display:none"><path d="M8 3v5H3M16 3v5h5M3 16h5v5M21 16h-5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Playlist sidebar -->
+      <aside id="playlist-sidebar" class="playlist-sidebar hidden">
+        <div class="playlist-sidebar-header">
+          <span>Queue</span>
+          <button id="close-playlist-btn" class="icon-btn sm">
+            <svg viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <ul id="playlist-items" class="playlist-items"></ul>
+      </aside>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Subtitle popup -->
+<div id="subtitle-menu" class="popup-menu hidden">
+  <div class="popup-menu-header">
+    <span>Subtitles</span>
+    <button id="close-subtitle-menu" class="icon-btn sm">
+      <svg viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <div id="subtitle-track-list" class="subtitle-track-list"></div>
+  <div class="subtitle-upload">
+    <label for="sub-file-input" class="subtitle-upload-label">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Load subtitle file…
+    </label>
+    <input type="file" id="sub-file-input" accept=".srt,.vtt" hidden>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
