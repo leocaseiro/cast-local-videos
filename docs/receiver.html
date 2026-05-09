@@ -51,9 +51,16 @@
       justify-content: center;
       gap: 32px;
       background: radial-gradient(ellipse at 50% 55%, #1c1028 0%, #07070d 70%);
-      transition: opacity 0.8s ease;
+      transition: opacity 0.8s ease, visibility 0s linear 0s;
     }
-    #idle.gone { opacity: 0; pointer-events: none; }
+    /* visibility flips to hidden AFTER the opacity fade so it can't intercept
+       paint or pointer events while invisible */
+    #idle.gone {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 0.8s ease, visibility 0s linear 0.8s;
+    }
 
     .brand {
       display: flex;
@@ -121,15 +128,28 @@
   const pm   = ctx.getPlayerManager();
   const idle = document.getElementById('idle');
 
-  // Hide idle screen as soon as the sender loads media
+  const hideIdle = () => idle.classList.add('gone');
+  const showIdle = () => idle.classList.remove('gone');
+
+  // 1) Earliest hook: intercept the LOAD request before the SDK processes it.
   pm.setMessageInterceptor(cast.framework.messages.MessageType.LOAD, (req) => {
-    idle.classList.add('gone');
+    hideIdle();
     return req; // must return the request for playback to proceed
   });
 
-  // Restore idle screen when the queue is fully exhausted
+  // 2) Belt-and-suspenders. Different sender paths (queueData, preload,
+  //    session resume) don't always trip the LOAD interceptor cleanly,
+  //    so hide the overlay on any sign of non-IDLE playback.
+  [
+    cast.framework.events.EventType.PLAYER_LOAD_COMPLETE,
+    cast.framework.events.EventType.PLAYING,
+    cast.framework.events.EventType.BUFFERING,
+    cast.framework.events.EventType.MEDIA_STATUS,
+  ].forEach(evt => evt && pm.addEventListener(evt, hideIdle));
+
+  // 3) Restore the idle screen only when the queue is fully exhausted.
   pm.addEventListener(cast.framework.events.EventType.MEDIA_FINISHED, () => {
-    setTimeout(() => idle.classList.remove('gone'), 800);
+    setTimeout(showIdle, 800);
   });
 
   ctx.start();
