@@ -21,13 +21,23 @@ Download the latest build for your Mac from the [Releases page](https://github.c
 
 ### First launch (unsigned build)
 
-The app isn't signed with an Apple Developer ID yet, so macOS will refuse to open it on first launch. To bypass:
+The app is ad-hoc signed but not signed with an Apple Developer ID, so macOS will refuse to open it the first time. To bypass:
 
 1. Open the `.dmg` and drag **CastLocalVideos** to your Applications folder.
 2. In Applications, **right-click** CastLocalVideos → **Open**.
 3. Click **Open** in the warning dialog.
 
+On macOS Sequoia (15+) right-click → Open is gone. Instead, double-click the app once (the launch will be blocked), then go to **System Settings → Privacy & Security**, scroll to the bottom, and click **Open Anyway**.
+
 After that first launch, double-clicking works normally.
+
+#### If macOS says the app is "damaged"
+
+That message appears when the quarantine flag from your browser is still attached. Run this once in Terminal to clear it, then launch normally:
+
+```bash
+xattr -cr /Applications/CastLocalVideos.app
+```
 
 ---
 
