@@ -1,6 +1,6 @@
 {
   "name": "cast-local-videos",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Local video player with Chromecast support — desktop app + tray companion",
   "author": "Leo Caseiro",
   "homepage": "https://leocaseiro.github.io/cast-local-videos/",
@@ -37,6 +37,7 @@
       "output":         "dist-electron",
       "buildResources": "electron/build"
     },
+    "afterPack": "./electron/sign-adhoc.js",
     "files": [
       "electron/**/*",
       "server.js",
@@ -63,7 +64,7 @@
       "category":          "public.app-category.entertainment",
       "icon":              "electron/build/icon.png",
       "artifactName":      "${productName}-${arch}.${ext}",
-      "identity":          "-",
+      "identity":          null,
       "hardenedRuntime":   false,
       "gatekeeperAssess":  false,
       "darkModeSupport":   true,
