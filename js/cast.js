@@ -1,11 +1,21 @@
 import { srtToVtt } from './subtitles.js';
 
-const RECEIVER_ID = 'CC1AD845'; // Default Media Receiver
+// ── Replace CC1AD845 with your custom receiver ID once registered ──────────
+// 1. Host receiver.html at an HTTPS URL (e.g. GitHub Pages)
+// 2. Register at https://cast.google.com/publish → Add new application → Custom Receiver
+//    URL: https://your-user.github.io/your-repo/receiver.html
+// 3. Paste the generated ID here (takes ~15 min to activate after saving)
+const RECEIVER_ID = 'CC1AD845'; // Default Media Receiver (fallback until custom ID)
+
 const COMPANION_PORT = 8642;
-const COMPANION_URL = `http://localhost:${COMPANION_PORT}`;
+const COMPANION_URL  = `http://localhost:${COMPANION_PORT}`;
+
+// Queue item IDs encode the playlist index: itemId = playlistIndex + OFFSET
+// Using 1-based so itemId 0 (falsy) is never assigned.
+const QUEUE_ID_OFFSET = 1;
 
 let castAvailable = false;
-let castSession = null;
+let castSession   = null;
 
 export function initCast(onStateChange) {
   function setup(isAvailable) {
@@ -32,7 +42,6 @@ export function initCast(onStateChange) {
     onStateChange('available', null);
   }
 
-  // The SDK may have already fired __onGCastApiAvailable before this module ran.
   if (window.__castApiReady !== undefined) {
     setup(window.__castApiReady);
   } else {
@@ -53,72 +62,132 @@ export function getCastDeviceName() {
   return session?.getCastDevice()?.friendlyName || null;
 }
 
-export async function castMedia(videoUrl, title, subtitleUrl = null, startTime = 0) {
+// ─── Media loading ─────────────────────────────────────────────────────────
+
+export async function castMedia(videoUrl, title, subtitleUrl = null, startTime = 0, playlistIndex = 0) {
   const session = getCastSession();
   if (!session) {
     const ctx = cast.framework.CastContext.getInstance();
-    try {
-      await ctx.requestSession();
-    } catch {
-      return false;
-    }
+    try { await ctx.requestSession(); } catch { return false; }
   }
 
   const s = getCastSession();
   if (!s) return false;
 
-  const mediaInfo = new chrome.cast.media.MediaInfo(videoUrl, 'video/mp4');
-  mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-  mediaInfo.metadata.title = title;
+  const mediaInfo = _buildMediaInfo(videoUrl, title, subtitleUrl);
 
-  if (subtitleUrl) {
-    const track = new chrome.cast.media.Track(1, chrome.cast.media.TrackType.TEXT);
-    track.trackContentId = subtitleUrl;
-    track.trackContentType = 'text/vtt';
-    track.subtype = chrome.cast.media.TextTrackType.SUBTITLES;
-    track.name = 'Subtitles';
-    mediaInfo.tracks = [track];
-  }
+  // Wrap in a queue so the receiver shows next/prev controls and "Up next" card
+  const queueItem = new chrome.cast.media.QueueItem(mediaInfo);
+  queueItem.itemId = playlistIndex + QUEUE_ID_OFFSET;
+  if (startTime > 0) queueItem.startTime = startTime;
+  if (subtitleUrl) queueItem.activeTrackIds = [1];
+
+  const queueData = new chrome.cast.media.QueueData();
+  queueData.items = [queueItem];
 
   const req = new chrome.cast.media.LoadRequest(mediaInfo);
+  req.queueData = queueData;
   if (subtitleUrl) req.activeTrackIds = [1];
   if (startTime > 0) req.currentTime = startTime;
 
-  try {
-    await s.loadMedia(req);
-    return true;
-  } catch {
-    return false;
-  }
+  try { await s.loadMedia(req); return true; } catch { return false; }
 }
 
-export function isLocalUrl(url) {
-  return url.startsWith('blob:') || url.startsWith('file:');
+// Insert the next episode into the existing cast queue.
+// Call this after pre-uploading the next video in the background.
+export function queueNextItem(castUrl, title, subtitleUrl, playlistIndex) {
+  if (!castAvailable) return Promise.resolve();
+  const session = getCastSession();
+  const media = session?.getMediaSession();
+  if (!media) return Promise.resolve();
+
+  const mediaInfo = _buildMediaInfo(castUrl, title, subtitleUrl);
+  const item = new chrome.cast.media.QueueItem(mediaInfo);
+  item.itemId = playlistIndex + QUEUE_ID_OFFSET;
+  item.preloadTime = 20; // receiver starts buffering 20s before current item ends
+  if (subtitleUrl) item.activeTrackIds = [1];
+
+  const req = new chrome.cast.media.QueueInsertItemsRequest([item]);
+  return new Promise((resolve) => {
+    media.queueInsertItems(req, resolve, (err) => {
+      console.warn('[cast] queueInsertItems:', err);
+      resolve();
+    });
+  });
 }
 
-export async function pingCompanion() {
-  try {
-    const r = await fetch(`${COMPANION_URL}/ping`, { signal: AbortSignal.timeout(1500) });
-    if (!r.ok) return null;
-    return await r.json(); // { ok, ip, port }
-  } catch {
-    return null;
-  }
-}
+// ─── Playback controls ─────────────────────────────────────────────────────
 
 export function stopCast() {
   if (!castAvailable) return;
   cast.framework.CastContext.getInstance().endCurrentSession(true);
 }
 
+// Toggle the first text track on/off. Returns the new enabled state.
+export function toggleCastSubtitles() {
+  if (!castAvailable) return false;
+  const session = getCastSession();
+  const media = session?.getMediaSession();
+  if (!media) return false;
+
+  const tracks = media.media?.tracks ?? [];
+  const textTrack = tracks.find(t => t.type === chrome.cast.media.TrackType.TEXT);
+  if (!textTrack) return false;
+
+  const id = textTrack.trackId;
+  const active = media.activeTrackIds ?? [];
+  const isOn = active.includes(id);
+  const next = isOn ? active.filter(x => x !== id) : [...active, id];
+
+  media.editTracksInfo(new chrome.cast.media.EditTracksInfoRequest(next), null,
+    (err) => console.warn('[cast] editTracksInfo:', err));
+  return !isOn;
+}
+
+// Decode the playlist index from a Cast queue item ID.
+export function queueItemIdToIndex(itemId) {
+  return itemId - QUEUE_ID_OFFSET;
+}
+
+// ─── Companion server uploads ──────────────────────────────────────────────
+
+export async function pingCompanion() {
+  try {
+    const r = await fetch(`${COMPANION_URL}/ping`, { signal: AbortSignal.timeout(1500) });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+export async function uploadForCast(fileHandle, onProgress) {
+  const file = await fileHandle.getFile();
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${COMPANION_URL}/upload`);
+    xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress?.(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error('Invalid response from companion server')); }
+      } else { reject(new Error(`Server error: ${xhr.status}`)); }
+    };
+    xhr.onerror = () => reject(new Error('Cannot reach companion server — is it running? (node server.js)'));
+    xhr.send(file);
+  });
+}
+
 export async function uploadSubtitleForCast(fileHandle) {
   const file = await fileHandle.getFile();
-  const ext = file.name.split('.').pop().toLowerCase();
-  let text = await file.text();
+  const ext  = file.name.split('.').pop().toLowerCase();
+  let text   = await file.text();
   if (ext === 'srt') text = srtToVtt(text);
 
   const vttName = file.name.replace(/\.[^.]+$/, '.vtt');
-  const blob = new Blob([text], { type: 'text/vtt' });
+  const blob    = new Blob([text], { type: 'text/vtt' });
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -129,39 +198,30 @@ export async function uploadSubtitleForCast(fileHandle) {
       if (xhr.status >= 200 && xhr.status < 300) {
         try { resolve(JSON.parse(xhr.responseText)); }
         catch { reject(new Error('Invalid response from companion server')); }
-      } else {
-        reject(new Error(`Server error: ${xhr.status}`));
-      }
+      } else { reject(new Error(`Server error: ${xhr.status}`)); }
     };
     xhr.onerror = () => reject(new Error('Cannot reach companion server'));
     xhr.send(blob);
   });
 }
 
-export async function uploadForCast(fileHandle, onProgress) {
-  const file = await fileHandle.getFile();
+export function isLocalUrl(url) {
+  return url.startsWith('blob:') || url.startsWith('file:');
+}
 
-  // XHR gives us upload progress; fetch with streaming body requires HTTP/2
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${COMPANION_URL}/upload`);
-    xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
-    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4');
+// ─── Private ───────────────────────────────────────────────────────────────
 
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress?.(e.loaded / e.total);
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch { reject(new Error('Invalid response from companion server')); }
-      } else {
-        reject(new Error(`Server error: ${xhr.status}`));
-      }
-    };
-
-    xhr.onerror = () => reject(new Error('Cannot reach companion server — is it running? (node server.js)'));
-    xhr.send(file);
-  });
+function _buildMediaInfo(videoUrl, title, subtitleUrl) {
+  const info = new chrome.cast.media.MediaInfo(videoUrl, 'video/mp4');
+  info.metadata = new chrome.cast.media.GenericMediaMetadata();
+  info.metadata.title = title;
+  if (subtitleUrl) {
+    const track = new chrome.cast.media.Track(1, chrome.cast.media.TrackType.TEXT);
+    track.trackContentId  = subtitleUrl;
+    track.trackContentType = 'text/vtt';
+    track.subtype = chrome.cast.media.TextTrackType.SUBTITLES;
+    track.name    = 'Subtitles';
+    info.tracks   = [track];
+  }
+  return info;
 }

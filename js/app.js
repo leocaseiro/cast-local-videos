@@ -2,7 +2,7 @@ import { openDB, db_put, db_get, db_delete, db_getAll, getRecentlyWatched } from
 import { scanDirectory, generateThumbnail, formatSize } from './scanner.js';
 import { parseM3U, buildPlaylistFromVideos, sortVideos } from './playlist.js';
 import { Player } from './player.js';
-import { initCast, castMedia, isLocalUrl, pingCompanion, uploadForCast, uploadSubtitleForCast, getCastDeviceName, stopCast } from './cast.js';
+import { initCast, castMedia, queueNextItem, isLocalUrl, pingCompanion, uploadForCast, uploadSubtitleForCast, getCastDeviceName, stopCast, toggleCastSubtitles } from './cast.js';
 
 // ─── State ─────────────────────────────────────────────────────────────────
 
@@ -83,6 +83,19 @@ function setupPlayerUI() {
   });
   state.player.onPrev = () => playPrev();
 
+  // Toggle subtitles on the Chromecast from the browser CC button
+  state.player.onToggleCastSubtitles = toggleCastSubtitles;
+
+  // Fired when the TV remote skips to a different queue item
+  state.player.onCastItemChanged = (playlistIndex) => {
+    state.currentIndex = playlistIndex;
+    const entry = state.playlist[playlistIndex]?.video;
+    if (entry) state.player.load(entry, false); // keep local copy in sync (no autoplay)
+    renderPlaylistSidebar();
+    renderRecent();
+    preloadNextForCast(playlistIndex + 1);
+  };
+
   window.addEventListener('videoError', () => {
     const v = state.videos[state.currentIndex];
     if (v) toast(`Couldn't play "${v.name}" — format may not be supported by this browser`, 'error');
@@ -140,8 +153,9 @@ async function castCurrentItem({ forceNew = false } = {}) {
   const title = item.title || item.video?.name || '';
 
   if (url && !isLocalUrl(url)) {
-    const ok = await castMedia(url, title, null, startTime);
-    if (!ok) toast('Failed to cast. Make sure a Chromecast is on the same network.', 'error');
+    const ok = await castMedia(url, title, null, startTime, state.currentIndex);
+    if (ok) preloadNextForCast(state.currentIndex + 1);
+    else toast('Failed to cast. Make sure a Chromecast is on the same network.', 'error');
     return;
   }
 
@@ -159,7 +173,6 @@ async function castCurrentItem({ forceNew = false } = {}) {
       (pct) => progressToast.update(`Uploading… ${Math.round(pct * 100)}%`)
     );
 
-    // Upload subtitle to companion server so Chromecast can fetch it
     let subCastUrl = null;
     const sub = item.video.subtitles?.[0];
     if (sub) {
@@ -172,8 +185,12 @@ async function castCurrentItem({ forceNew = false } = {}) {
     }
 
     progressToast.dismiss();
-    const ok = await castMedia(castUrl, title, subCastUrl, startTime);
-    if (!ok) toast('Cast failed. Make sure a Chromecast is on the same network.', 'error');
+    const ok = await castMedia(castUrl, title, subCastUrl, startTime, state.currentIndex);
+    if (ok) {
+      preloadNextForCast(state.currentIndex + 1);
+    } else {
+      toast('Cast failed. Make sure a Chromecast is on the same network.', 'error');
+    }
   } catch (err) {
     progressToast.dismiss();
     toast(`Upload failed: ${err.message}`, 'error');
@@ -544,6 +561,39 @@ async function onPlaylistFileSelected(e) {
   }
 
   e.target.value = '';
+}
+
+// ─── Cast preloading ──────────────────────────────────────────────────────────
+
+// Silently upload the next episode and insert it into the cast queue.
+// This enables "Up next" display and skip-forward on the TV remote.
+async function preloadNextForCast(index) {
+  if (!state.player.isCasting()) return;
+  if (index < 0 || index >= state.playlist.length) return;
+
+  const item = state.playlist[index];
+  if (!item) return;
+
+  const companion = await pingCompanion();
+  if (!companion) return;
+
+  try {
+    const { castUrl } = await uploadForCast(item.video.handle, null);
+
+    let subCastUrl = null;
+    const sub = item.video.subtitles?.[0];
+    if (sub) {
+      try {
+        const { castUrl: sUrl } = await uploadSubtitleForCast(sub.handle);
+        subCastUrl = sUrl;
+      } catch {}
+    }
+
+    await queueNextItem(castUrl, item.title || item.video.name, subCastUrl, index);
+    console.log(`[cast] queued next: index ${index} "${item.title}"`);
+  } catch (err) {
+    console.warn('[cast] preload failed:', err.message);
+  }
 }
 
 // ─── View switching ───────────────────────────────────────────────────────────

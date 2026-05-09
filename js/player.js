@@ -22,6 +22,9 @@ export class Player {
     this._remoteController = null;
     this._rcHandlers = null;
     this._castHasPlayed = false;
+    this._lastCastItemIndex = -1;
+    this.onCastItemChanged = null;    // (playlistIndex: number) => void
+    this.onToggleCastSubtitles = null; // () => void
 
     this._setupElements();
     this._bindEvents();
@@ -226,6 +229,7 @@ export class Player {
     document.getElementById('cast-overlay').style.display = '';
     document.getElementById('cast-device-label').textContent = deviceName || 'your TV';
 
+    this._lastCastItemIndex = -1;
     this._remotePlayer = new cast.framework.RemotePlayer();
     this._remoteController = new cast.framework.RemotePlayerController(this._remotePlayer);
     this._bindRemoteEvents();
@@ -313,6 +317,18 @@ export class Player {
         if (this._remotePlayer.playerState === 'IDLE' && this._castHasPlayed) {
           this._castHasPlayed = false;
           this.onEnded();
+        }
+      },
+      // Fires when the receiver advances to a different queue item (TV remote skip)
+      [RC.CURRENT_ITEM_ID_CHANGED]: () => {
+        if (!this._remotePlayer) return;
+        const itemId = this._remotePlayer.currentItemId;
+        if (itemId == null) return;
+        const idx = itemId - 1; // QUEUE_ID_OFFSET = 1
+        if (idx >= 0 && idx !== this._lastCastItemIndex) {
+          this._lastCastItemIndex = idx;
+          this._castHasPlayed = false; // reset for new item
+          this.onCastItemChanged?.(idx);
         }
       },
     };
@@ -532,6 +548,10 @@ export class Player {
   }
 
   _toggleSubtitleMenu() {
+    if (this._castMode) {
+      this.onToggleCastSubtitles?.();
+      return;
+    }
     if (this.subtitleMenu.classList.contains('hidden')) {
       this._renderSubtitleMenu();
       this.subtitleMenu.classList.remove('hidden');
