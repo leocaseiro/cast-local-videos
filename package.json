@@ -1,5 +1,5 @@
 {
-  "name": "streamlocal",
+  "name": "cast-local-videos",
   "version": "1.0.0",
   "description": "Local video player with Chromecast support — desktop app + tray companion",
   "main": "electron/main.js",
@@ -24,9 +24,9 @@
     "node": ">=18"
   },
   "build": {
-    "appId": "com.streamlocal.app",
-    "productName": "StreamLocal",
-    "copyright": "Copyright © 2026 StreamLocal",
+    "appId": "com.castlocalvideos.app",
+    "productName": "CastLocalVideos",
+    "copyright": "Copyright © 2026 CastLocalVideos",
     "directories": {
       "output":         "dist-electron",
       "buildResources": "electron/build"
@@ -53,7 +53,7 @@
       "darkModeSupport":     true,
       "extendInfo": {
         "LSUIElement": true,
-        "NSLocalNetworkUsageDescription": "StreamLocal serves your videos over your Wi-Fi so Chromecast can play them."
+        "NSLocalNetworkUsageDescription": "CastLocalVideos serves your videos over your Wi-Fi so Chromecast can play them."
       }
     },
     "win": {

@@ -1,11 +1,8 @@
 import { srtToVtt } from './subtitles.js';
 
-// ── Replace CC1AD845 with your custom receiver ID once registered ──────────
-// 1. Host receiver.html at an HTTPS URL (e.g. GitHub Pages)
-// 2. Register at https://cast.google.com/publish → Add new application → Custom Receiver
-//    URL: https://your-user.github.io/your-repo/receiver.html
-// 3. Paste the generated ID here (takes ~15 min to activate after saving)
-const RECEIVER_ID = 'CC1AD845'; // Default Media Receiver (fallback until custom ID)
+// CastLocalVideos custom receiver — registered at https://cast.google.com/publish
+// pointing at https://leocaseiro.github.io/cast-local-videos/receiver.html
+const RECEIVER_ID = '2F7F0CDE';
 
 const COMPANION_PORT = 8642;
 const COMPANION_URL  = `http://localhost:${COMPANION_PORT}`;

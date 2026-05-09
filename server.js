@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * StreamLocal companion server
+ * CastLocalVideos companion server
  * Receives video files from the browser app and re-serves them over HTTP
  * so Chromecast (on the same LAN) can fetch them.
  *
@@ -107,7 +107,7 @@ function startCompanionServer({ port = 8642, host = '0.0.0.0', logger = console 
       const filename    = sanitizeFilename(rawName);
       const contentType = req.headers['content-type'] || 'video/mp4';
       const id          = crypto.randomBytes(8).toString('hex');
-      const tempFile    = path.join(TEMP, `streamlocal-${id}-${filename}`);
+      const tempFile    = path.join(TEMP, `castlocalvideos-${id}-${filename}`);
 
       const writeStream = fs.createWriteStream(tempFile);
 
@@ -164,12 +164,12 @@ function startCompanionServer({ port = 8642, host = '0.0.0.0', logger = console 
     }
 
     res.writeHead(404);
-    res.end('StreamLocal companion server');
+    res.end('CastLocalVideos companion server');
   });
 
   server.listen(port, host, () => {
     const ip = getLocalIP();
-    logger.log('\n🎬  StreamLocal companion server');
+    logger.log('\n🎬  CastLocalVideos companion server');
     logger.log(`    Local:   http://localhost:${port}`);
     logger.log(`    Network: http://${ip}:${port}\n`);
   });

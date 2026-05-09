@@ -1,3 +1,5 @@
+// Legacy DB name preserved across the StreamLocal → CastLocalVideos rename
+// so existing user data (folder handles, watch progress, thumbnails) survives.
 const DB_NAME = 'StreamLocalDB';
 const DB_VERSION = 1;
 

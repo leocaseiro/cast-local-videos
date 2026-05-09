@@ -1,7 +1,7 @@
-// StreamLocal — Electron tray app
+// CastLocalVideos — Electron tray app
 //
 // Runs the static web server and the Cast companion server in-process,
-// then opens the StreamLocal sender UI in Google Chrome (where the Cast SDK
+// then opens the CastLocalVideos sender UI in Google Chrome (where the Cast SDK
 // works). Lives in the system tray / menu bar; quitting the tray icon stops
 // the servers and exits.
 
@@ -52,8 +52,8 @@ async function start() {
   }
 
   tray = new Tray(loadTrayIcon());
-  if (process.platform === 'darwin') tray.setTitle(' StreamLocal');
-  tray.setToolTip('StreamLocal — local video casting');
+  if (process.platform === 'darwin') tray.setTitle(' CastLocalVideos');
+  tray.setToolTip('CastLocalVideos — local video casting');
   tray.setContextMenu(buildMenu());
   tray.on('click', () => tray.popUpContextMenu());
 
@@ -62,13 +62,13 @@ async function start() {
 
 function buildMenu() {
   return Menu.buildFromTemplate([
-    { label: 'Open StreamLocal in Chrome', click: () => openInChrome() },
+    { label: 'Open CastLocalVideos in Chrome', click: () => openInChrome() },
     { label: 'Open in default browser',    click: () => shell.openExternal(SENDER_URL) },
     { type: 'separator' },
     { label: `Web UI:  ${SENDER_URL}`,                       enabled: false },
     { label: `Cast server:  http://localhost:${COMPANION_PORT}`, enabled: false },
     { type: 'separator' },
-    { label: 'About StreamLocal', click: showAbout },
+    { label: 'About CastLocalVideos', click: showAbout },
     { label: 'Quit',              click: () => app.quit(), accelerator: 'CmdOrCtrl+Q' },
   ]);
 }
@@ -76,8 +76,8 @@ function buildMenu() {
 function showAbout() {
   dialog.showMessageBox({
     type: 'info',
-    title: 'StreamLocal',
-    message: `StreamLocal v${app.getVersion()}`,
+    title: 'CastLocalVideos',
+    message: `CastLocalVideos v${app.getVersion()}`,
     detail:
       'Local video player with Chromecast support.\n\n' +
       `Web UI: ${SENDER_URL}\n` +
@@ -89,7 +89,7 @@ function showAbout() {
 }
 
 function showFatal(title, err) {
-  dialog.showErrorBox(`StreamLocal — ${title}`, String(err && err.message || err));
+  dialog.showErrorBox(`CastLocalVideos — ${title}`, String(err && err.message || err));
   app.quit();
 }
 

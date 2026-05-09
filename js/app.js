@@ -162,7 +162,7 @@ async function castCurrentItem({ forceNew = false } = {}) {
   // Local file — stream via companion server (Chromecast can't access browser blob: URLs)
   const companion = await pingCompanion();
   if (!companion) {
-    toast('Run the companion server first:\n  node server.js\n(in the StreamLocal folder)', 'error');
+    toast('Run the companion server first:\n  node server.js\n(in the CastLocalVideos folder)', 'error');
     return;
   }
 

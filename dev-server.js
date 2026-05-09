@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Static file server for the StreamLocal web app. Zero npm dependencies.
+// Static file server for the CastLocalVideos web app. Zero npm dependencies.
 //
 // Usage as CLI:    node dev-server.js [port]
 // Usage as module: const { startWebServer } = require('./dev-server.js')
@@ -47,7 +47,7 @@ function startWebServer({ port = 8765, root = __dirname, logger = console } = {}
   });
 
   server.listen(port, '127.0.0.1', () => {
-    logger.log(`StreamLocal web app → http://localhost:${port}`);
+    logger.log(`CastLocalVideos web app → http://localhost:${port}`);
   });
 
   return server;
