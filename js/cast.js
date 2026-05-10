@@ -3,6 +3,7 @@ import { srtToVtt } from './subtitles.js';
 // CastLocalVideos custom receiver — registered at https://cast.google.com/publish
 // pointing at https://leocaseiro.github.io/cast-local-videos/receiver.html
 const RECEIVER_ID = '2F7F0CDE';
+// const RECEIVER_ID = 'CC1AD845';
 
 const COMPANION_PORT = 8642;
 const COMPANION_URL  = `http://localhost:${COMPANION_PORT}`;
